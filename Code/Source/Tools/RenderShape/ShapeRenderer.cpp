@@ -440,7 +440,7 @@ ShapeRendererImpl::exec(int argc, char ** argv)
             cam_path = FilePath::concat(FilePath::parent(cam_path),
                                     FilePath::baseName(cam_path) + format("_%06ld.", (long)v) + "camera");
           }
-          ofstream cam_file(cam_path, ios::out);
+          ofstream cam_file(cam_path.c_str(), ios::out);
           cam_file << camera.toString() << endl;
           cam_file.close();
         }
