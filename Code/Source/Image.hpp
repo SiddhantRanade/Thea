@@ -43,6 +43,9 @@
 #define __Thea_Image_hpp__
 
 #include "Common.hpp"
+#include "AbstractImage.hpp"
+#include "AlignedAllocator.hpp"
+#include "Array.hpp"
 #include "IOStream.hpp"
 #include "Serializable.hpp"
 
@@ -51,158 +54,7 @@ class fipImage;
 
 namespace Thea {
 
-/** Abstract base class for images, useful for passing images across shared library boundaries. */
-class THEA_API AbstractImage
-{
-  public:
-    /**
-     * Indices for the color channels in a single pixel. E.g. for a 24-bit RGB bitmap (8 bits per channel), the individual
-     * components for the pixel at address <code>unsigned char * p</code> may be accessed as <code>p[Channel::RED]</code>,
-     * <code>p[Channel::GREEN]</code> and <code>p[Channel::BLUE]</code>.
-     */
-    struct THEA_API Channel
-    {
-      static int const RED;    ///< Index of red channel
-      static int const GREEN;  ///< Index of green channel
-      static int const BLUE;   ///< Index of blue channel
-      static int const ALPHA;  ///< Index of alpha channel
-    };
-
-    /**
-     * Different image types (enum class plus extra functions). Note that the channel ordering can be OS dependent, hence access
-     * is best achieved using the implementation-specific RED, GREEN, BLUE and ALPHA indices.
-     */
-    struct THEA_API Type
-    {
-      /** Supported values. */
-      enum Value
-      {
-        LUMINANCE_1U,   ///< 1-bit luminance image.
-        LUMINANCE_2U,   ///< 2-bit luminance image.
-        LUMINANCE_4U,   ///< 4-bit luminance image.
-        LUMINANCE_8U,   ///< 8-bit luminance image.
-        LUMINANCE_16,   ///< 16-bit signed luminance image.
-        LUMINANCE_16U,  ///< 16-bit unsigned luminance image.
-        LUMINANCE_32,   ///< 32-bit signed luminance image.
-        LUMINANCE_32U,  ///< 32-bit unsigned luminance image.
-        LUMINANCE_32F,  ///< 32-bit floating-point luminance image.
-        LUMINANCE_64F,  ///< 64-bit floating-point luminance image.
-        RGB_8U,         ///< RGB image, 8 bits per channel.
-        RGBA_8U,        ///< RGBA image, 8 bits per channel.
-        RGB_16U,        ///< RGB image, 16 bits per channel.
-        RGBA_16U,       ///< RGBA image, 16 bits per channel.
-        RGB_32F,        ///< RGB image, 32-bit floating point per channel.
-        RGBA_32F,       ///< RGBA image, 32-bit floating point per channel.
-        COMPLEX_64F,    ///< Image of complex numbers with 64-bit floating point real and imaginary parts.
-        UNKNOWN,        ///< Unknown format.
-      };
-
-      THEA_ENUM_CLASS_BODY(Type)
-
-      /**
-       * Get the number of channels per pixel. For example: 1 for luminance, 3 for RGB, 4 for RGBA. A complex number corresponds
-       * to a single channel (not two). Returns -1 if the image is of unknown type.
-       */
-      int numChannels() const;
-
-      /** Check if the channels hold complex (as opposed to real) values. */
-      bool isComplex() const;
-
-      /** Check if the channels hold floating-point values (at any precision). */
-      bool isFloatingPoint() const;
-
-      /** Get the number of bits assigned to each pixel. */
-      int getBitsPerPixel() const;
-
-      /** Get the number of bits assigned to each channel. Returns -1 if the channels don't all have the same number of bits. */
-      int getBitsPerChannel() const;
-
-      /**
-       * Get the number of bits assigned to a particular channel. For luminance images, the single channel is assumed to
-       * correspond to the enum value Channel::ALPHA. If the image doesn't contain the specific channel (e.g. luminance images
-       * don't have red, green or blue channels) a value of zero is returned.
-       */
-      int getBitsInChannel(int channel) const;
-
-      /** Check if the image pixels start at byte addresses. For example, RGB_8U does, but LUMINANCE_1U does not. */
-      bool hasByteAlignedPixels() const;
-
-      /** Check if all pixel channels are aligned to byte addresses. */
-      bool hasByteAlignedChannels() const;
-
-    }; // struct Type
-
-    /** Image resampling filters (enum class). */
-    struct Filter
-    {
-      /** Supported values (copied from FreeImage). */
-      enum Value
-      {
-        BOX,          ///< Box, pulse, Fourier window, 1st order (constant) B-Spline.
-        BILINEAR,     ///< Bilinear filter.
-        BSPLINE,      ///< 4th order (cubic) B-Spline.
-        BICUBIC,      ///< Mitchell and Netravali's two-parameter cubic filter.
-        CATMULL_ROM,  ///< Catmull-Rom spline, Overhauser spline.
-        LANCZOS3,     ///< Lanczos-windowed sinc filter.
-        AUTO,         ///< Automatically choose an appropriate filter.
-      };
-
-      THEA_ENUM_CLASS_BODY(Filter);
-
-    }; // struct Filter
-
-    /** Destructor. */
-    virtual ~AbstractImage() {}
-
-    /**
-     * Check if the image has been allocated non-zero memory space (hence has valid type and dimensions) or not. An image
-     * created by the default constructor is invalid and must be further initialized using deserialize() or a similar function.
-     */
-    virtual bool isValid() const = 0;
-
-    /**
-     * Destroy all image data, resetting the image to an invalid state.
-     *
-     * @see isValid()
-     */
-    virtual void clear() = 0;
-
-    /** Resize the image, changing its type and dimensions. All previous image data is discarded. */
-    virtual void resize(Type type, int width, int height) = 0;
-
-    /** Get the width of the image in pixels. */
-    virtual int getWidth() const = 0;
-
-    /** Get the height of the image in pixels. */
-    virtual int getHeight() const = 0;
-
-    /** Get the type of the image pixels. */
-    virtual Type getType() const = 0;
-
-    /** Get a pointer to the image data. */
-    virtual void const * getData() const = 0;
-
-    /** Get a pointer to the image data. */
-    virtual void * getData() = 0;
-
-    /** Get a pointer to the beginning of a specified row of pixels. */
-    virtual void const * getScanLine(int row) const = 0;
-
-    /** Get a pointer to the beginning of a specified row of pixels. */
-    virtual void * getScanLine(int row) = 0;
-
-    /**
-     * Get the number of bytes consumed by a row of pixels. Rows may be aligned to 32-bit (or other) boundaries for performance
-     * reasons, so this is <b>not</b> necessarily equal to the number of pixels in a row times the size of a pixel.
-     */
-    virtual int getScanWidth() const = 0;
-
-    /** Get the byte alignment of a pixel row. */
-    virtual int getRowAlignment() const = 0;
-
-}; // class AbstractImage
-
-/** 2D images. */
+/** A 2D image. */
 class THEA_API Image : public AbstractImage, public Serializable
 {
   public:
@@ -212,7 +64,7 @@ class THEA_API Image : public AbstractImage, public Serializable
     Image();
 
     /** Construct an uninitialized image of the specified type and pixel dimensions, which must have valid non-zero values. */
-    Image(Type type_, int width, int height);
+    Image(Type type_, int width_, int height_, int depth_ = 1);
 
     /**
      * Construct an image by deserializing it from an input stream.
@@ -226,7 +78,7 @@ class THEA_API Image : public AbstractImage, public Serializable
      *
      * @see load()
      */
-    Image(std::string const & filename, Codec const & codec = Codec_AUTO());
+    Image(std::string const & path, Codec const & codec = Codec_AUTO());
 
     /* Copy constructor. */
     Image(Image const & src);
@@ -239,9 +91,10 @@ class THEA_API Image : public AbstractImage, public Serializable
 
     bool isValid() const;
     void clear();
-    void resize(Type type, int width, int height);
-    int getWidth() const;
-    int getHeight() const;
+    void resize(Type type, int width_, int height_, int depth_ = 1);
+    int getWidth() const { return width; }
+    int getHeight() const { return height; }
+    int getDepth() const { return depth; }
     Type getType() const { return type; }
 
     /**
@@ -303,8 +156,8 @@ class THEA_API Image : public AbstractImage, public Serializable
 
     void const * getData() const;
     void * getData();
-    void const * getScanLine(int row) const;
-    void * getScanLine(int row);
+    void const * getScanLine(int row, int z = 0) const;
+    void * getScanLine(int row, int z = 0);
     int getScanWidth() const;
     int getRowAlignment() const;
 
@@ -340,7 +193,7 @@ class THEA_API Image : public AbstractImage, public Serializable
     bool convert(Type dst_type, Image & dst) const;
 
     /** Rescale the image to a new width and height. */
-    bool rescale(int new_width, int new_height, Filter filter = Filter::AUTO);
+    bool rescale(int new_width, int new_height, int new_depth = 1, Filter filter = Filter::AUTO);
 
     /**
      * {@inheritDoc}
@@ -360,13 +213,13 @@ class THEA_API Image : public AbstractImage, public Serializable
      * Save the image to an image file. Unlike serialize(), the file will <b>not</b> have a prefixed header. An exception will
      * be thrown if the image cannot be saved.
      */
-    void save(std::string const & filename, Codec const & codec = Codec_AUTO()) const;
+    void save(std::string const & path, Codec const & codec = Codec_AUTO()) const;
 
     /**
      * Load the image from an image file. Unlike deserialize(), the file should <b>not</b> have a prefixed header. An exception
      * will be thrown if the image cannot be loaded.
      */
-    void load(std::string const & filename, Codec const & codec = Codec_AUTO());
+    void load(std::string const & path, Codec const & codec = Codec_AUTO());
 
     /** <b>[Internal use only]</b> Get the wrapped FreeImage bitmap. */
     fipImage const * _getFreeImage() const { return fip_img; }
@@ -384,8 +237,18 @@ class THEA_API Image : public AbstractImage, public Serializable
     /** Cache properties related to the image type. */
     void cacheTypeProperties();
 
-    fipImage * fip_img;
+    // Scanline alignment when allocating custom arrays
+    static size_t const ROW_ALIGNMENT = 8;  // would prefer 16 for SSE compatibility, but OpenGL supports a max of 8
+
+    // Image parameters
     Type type;
+    int width;
+    int height;
+    int depth;
+
+    // Image data
+    fipImage * fip_img;
+    TheaArray< uint8, AlignedAllocator<uint8, ROW_ALIGNMENT> > data;  // pixel buffer when fipImage won't work, e.g. 3D images
 
     // Cached type properties for fast access
     int   num_channels;
@@ -432,6 +295,8 @@ class THEA_API ImageCodec : public Codec
   };
 
 // TODO: Add options to all the ones that support them
+
+// 2D formats
 THEA_DEF_IMAGE_CODEC(CodecBMP,     "Windows or OS/2 Bitmap File (*.BMP)")
 THEA_DEF_IMAGE_CODEC(CodecCUT,     "Dr. Halo (*.CUT)")
 THEA_DEF_IMAGE_CODEC(CodecDDS,     "DirectDraw Surface (*.DDS)")
@@ -464,6 +329,9 @@ THEA_DEF_IMAGE_CODEC(CodecTIFF,    "Tagged Image File Format (*.TIF, *.TIFF)")
 THEA_DEF_IMAGE_CODEC(CodecWBMP,    "Wireless Bitmap (*.WBMP)")
 THEA_DEF_IMAGE_CODEC(CodecXBM,     "X11 Bitmap Format (*.XBM)")
 THEA_DEF_IMAGE_CODEC(CodecXPM,     "X11 Pixmap Format (*.XPM)")
+
+// 3D formats
+THEA_DEF_IMAGE_CODEC(Codec3BM,     "3D Bitmap (*.3BM)")
 
 /** JPEG image codec. */
 class THEA_API CodecJPEG : public ImageCodec
