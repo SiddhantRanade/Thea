@@ -98,6 +98,7 @@ class App : public wxApp
       Vector4 material;                                     ///< Surface material coefficients (kd, ka, ks, ksp).
       bool fancy_points;                                    ///< Draw points as shaded spheres?
       bool fancy_colors;                                    ///< Color points by a function of position?
+      bool to_file;
       Real point_scale;                                     ///< Scale point sizes by this factor.
       bool no_axes;                                         ///< Hide the coordinate axes?
       bool no_shading;                                      ///< No shading, just render raw colors?

@@ -860,8 +860,9 @@ ModelDisplay::saveScreenshot(std::string path) const
   glPushAttrib(GL_PIXEL_MODE_BIT);
   glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glReadBuffer(double_buffer == GL_TRUE ? GL_BACK : GL_FRONT);  // this is the default, but be explicit in case it was
+    // glReadBuffer(double_buffer == GL_TRUE ? GL_BACK : GL_FRONT);  // this is the default, but be explicit in case it was
                                                                   // modified elsewhere
+    glReadBuffer(GL_FRONT);
     glReadPixels(viewport[0], viewport[1], viewport[2], viewport[3], GL_RGB, GL_UNSIGNED_BYTE, img.GetData());
   glPopClientAttrib();
   glPopAttrib();

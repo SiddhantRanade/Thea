@@ -61,7 +61,7 @@ namespace Browse3D {
 App::Options::Options()
 : accentuate_features(false), color_cube_features(false), show_normals(false), show_graph(false), bg_plain(false),
   bg_color(ColorRGB::black()), two_sided(true), flat(false), material(0.3f, 0.7f, 0.2f, 25), fancy_points(false),
-  fancy_colors(false), point_scale(1), no_axes(false)
+  fancy_colors(false), to_file(false), point_scale(1), no_axes(false)
 {
 }
 
@@ -99,6 +99,7 @@ App::optsToString() const
       << "\n  material = " << opts.material.toString()
       << "\n  fancy-points = " << opts.fancy_points
       << "\n  fancy-colors = " << opts.fancy_colors
+      << "\n  to-file = " << opts.to_file
       << "\n  point-scale = " << opts.point_scale
       << "\n  no-axes = " << opts.no_axes
       << "\n  no-shading= " << opts.no_shading
@@ -235,6 +236,7 @@ App::parseOptions(std::vector<std::string> const & args)
           ("material,k",           po::value<std::string>(&s_material), "Surface material coefficients (ka, kd, ks, ksp)")
           ("fancy-points",         "Draw points as shaded spheres")
           ("fancy-colors,c",       "Color points by a function of position")
+          ("to-file",              "Save a screenshot and quit")
           ("point-scale,p",        po::value<Real>(&opts.point_scale)->default_value(1), "Scale point sizes by this factor")
           ("no-axes",              "Hide the coordinate axes")
           ("no-shading",           "No shading, just render raw colors")
@@ -323,6 +325,7 @@ App::parseOptions(std::vector<std::string> const & args)
   opts.flat                 =  (vm.count("flat") > 0);
   opts.fancy_points         =  (vm.count("fancy-points") > 0);
   opts.fancy_colors         =  (vm.count("fancy-colors") > 0);
+  opts.to_file              =  (vm.count("to-file") > 0);
   opts.no_axes              =  (vm.count("no-axes") > 0);
   opts.no_shading           =  (vm.count("no-shading") > 0);
 
@@ -369,6 +372,11 @@ App::createMainWindow()
   // Create the main window, and hence a rendering context
   main_window = new MainWindow;
   main_window->Show(true);
+
+  if (opts.to_file)
+  {
+    main_window->setSaveScreenshotAndQuit();
+  }
 }
 
 void

@@ -121,6 +121,8 @@ class MainWindow : public wxFrame
     /** Initialize the main window. Should be called at application startup. */
     void init();
 
+    void setSaveScreenshotAndQuit();
+
     /** Get the display widget showing the model. */
     ModelDisplay * getRenderDisplay();
 
@@ -222,6 +224,8 @@ class MainWindow : public wxFrame
     // Models
     Model * model;
     TheaArray<Model *> overlays;
+
+    bool SaveScreenshotAndQuit;
 
     // Widgets
     MainWindowUI ui;

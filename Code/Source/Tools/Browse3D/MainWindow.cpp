@@ -80,9 +80,15 @@ MainWindowUI::MainWindowUI()
 
 MainWindow::MainWindow(wxWindow * parent)
 : BaseType(parent, wxID_ANY, "Browse3D", wxDefaultPosition, wxSize(800, 600)),
-  model(NULL)
+  model(NULL), SaveScreenshotAndQuit(false)
 {
   init();
+}
+
+void
+MainWindow::setSaveScreenshotAndQuit()
+{
+  SaveScreenshotAndQuit = true;
 }
 
 void
@@ -731,7 +737,11 @@ MainWindow::setToolboxVisible(bool value)
 void
 MainWindow::updateUI(wxUpdateUIEvent & event)
 {
-  // TODO
+  if (SaveScreenshotAndQuit)
+  {
+    getRenderDisplay()->saveScreenshot();
+    OnExit();
+  }
 }
 
 void
