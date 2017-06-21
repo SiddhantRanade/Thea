@@ -1524,11 +1524,11 @@ ShapeRendererImpl::loadLabels(Model & model, FaceIndexMap const * tri_ids, FaceI
 
   if (model.is_point_cloud)
   {
-    if (labels.size() != model.points.size())
-    {
-      THEA_ERROR << "Label points are not in one-one correspondence with model points";
-      return false;
-    }
+    // if (labels.size() != model.points.size())
+    // {
+    //   THEA_ERROR << "Label points are not in one-one correspondence with model points " << labels.size() << " != " << model.points.size();
+    //   return false;
+    // }
 
     model.point_colors.resize(model.points.size());
     for (array_size_t i = 0; i < model.points.size(); ++i)
