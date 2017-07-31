@@ -35,6 +35,7 @@ usage(int argc, char * argv[])
   THEA_CONSOLE << "             with an initial oversampling factor of F";
   THEA_CONSOLE << " -v        : Generate samples at mesh vertices (ignores -n)";
   THEA_CONSOLE << " -f        : Generate samples at face centers (ignores -n)";
+  THEA_CONSOLE << " -m        : Write the name of the mesh from which each sample was drawn";
   THEA_CONSOLE << " -id       : Write the index of the face (or if -v, the vertex)";
   THEA_CONSOLE << "             from which each sample was drawn";
   THEA_CONSOLE << " -l <file> : Load face labels from file and write sample labels";
@@ -319,6 +320,7 @@ main(int argc, char * argv[])
   bool vertex_samples = false;
   bool face_samples = false;
   bool output_ids = false;
+  bool output_mesh_names = false;
   string labels_path;
 
   int curr_pos_arg = 0;
@@ -331,6 +333,8 @@ main(int argc, char * argv[])
         vertex_samples = true;
       else if (arg == "-f")
         face_samples = true;
+      else if (arg == "-m")
+        output_mesh_names = true;
       else if (arg == "-id")
         output_ids = true;
       else if (beginsWith(arg, "-s"))
@@ -413,8 +417,10 @@ main(int argc, char * argv[])
     TheaArray<Vector3> positions;
     TheaArray<Vector3> normals;
     TheaArray<long> indices;
+    TheaArray<string> mesh_names;
 
-    bool need_face_ids = (output_ids || output_labels);
+
+    bool need_face_ids = (output_ids || output_labels || output_mesh_names);
     bool do_random_sampling = true;
 
     if (vertex_samples)
@@ -458,6 +464,23 @@ main(int argc, char * argv[])
           indices[i] = face->attr().index;
         }
       }
+
+      if (output_mesh_names)
+      {
+        alwaysAssertM(tris.size() >= positions.size(), "Triangle IDs not initialized");
+
+        FaceToMeshMapper f2m;
+        mg.forEachMeshUntil(&f2m);
+        mesh_names.resize(positions.size());
+
+        for (array_size_t i = 0; i < positions.size(); ++i)
+        {
+          Mesh::Face const * face = tris[i]->getVertices().getMeshFace();
+          array_size_t face_index = face->attr().index;
+          Mesh const * msh = f2m.mapping[(array_size_t)face_index];
+          mesh_names[i] = msh->getName();
+        }
+      }
     }
 
     // Sanitize outputs, sometimes this is a problem with values smaller than 32-bit float precision like 4.01752e-42 getting
@@ -492,6 +515,11 @@ main(int argc, char * argv[])
         long label_index = (indices[i] < 0 || indices[i] >= (long)face_labels.size()
                           ? -1 : face_labels[(array_size_t)indices[i]]);
         out << " \"" << (label_index < 0 ? "" : labels[(array_size_t)label_index]) << '"';
+      }
+
+      if (output_mesh_names)
+      {
+        out << " \"" << mesh_names[i] << "\"";
       }
 
       out << '\n';
